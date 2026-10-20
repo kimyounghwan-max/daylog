@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>하루의 기록</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📔</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <p id="demo-banner" class="demo-banner" hidden></p>
+
+  <header class="top">
+    <a class="brand" href="#feed" id="brand">하루의 기록</a>
+    <nav class="tabs" aria-label="메뉴">
+      <a href="#feed" data-tab="feed">기록</a>
+      <a href="#health" data-tab="health">운동</a>
+      <a href="#picks" data-tab="picks">추천</a>
+    </nav>
+    <div class="top-actions" id="top-actions"></div>
+  </header>
+
+  <main>
+    <section id="hero" class="hero" aria-label="올해의 기록"></section>
+    <section id="view" class="view"></section>
+  </main>
+
+  <footer class="foot" id="foot"></footer>
+
+  <dialog id="editor" aria-label="기록 쓰기"></dialog>
+  <dialog id="login" aria-label="로그인"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
