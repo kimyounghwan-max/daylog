@@ -9,6 +9,6 @@ window.APP_CONFIG = {
   SITE_TITLE: '하루의 기록',
   OWNER_NAME: '나',
 
-  SUPABASE_URL: '',       // 예: 'https://abcdefgh.supabase.co'
-  SUPABASE_ANON_KEY: '',  // Project Settings → API 에서 복사
+  SUPABASE_URL: 'https://mtffldwfguxnbtiwjgnb.supabase.co',       // 예: 'https://abcdefgh.supabase.co'
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10ZmZsZHdmZ3V4bmJ0aXdqZ25iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0NzgyNjksImV4cCI6MjEwODA1NDI2OX0.eRaIaIWpwC2rENzYUR_ldYqZizjgSiF7Er7c5gYkZ4I',  // Project Settings → API 에서 복사
 };
