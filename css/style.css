@@ -287,6 +287,15 @@ button.day[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5p
 .rec .step { color: var(--ink-soft); font-size: .875rem; }
 .rec-actions { display: flex; gap: 14px; align-items: center; margin-top: auto !important; padding-top: 8px; }
 
+.rec-steps { margin: 20px 0 16px; padding-left: 1.25em; display: grid; gap: 12px; color: var(--ink-soft); max-width: 64ch; }
+.rec-steps li { padding-left: 4px; }
+.rec-steps .btn { margin-right: 8px; text-decoration: none; }
+.paste-box { display: grid; gap: 6px; font-size: .875rem; color: var(--ink-soft); margin: 0 0 4px; }
+.paste-box textarea {
+  width: 100%; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink);
+  border-radius: 6px; padding: 10px 12px; font-size: .875rem; line-height: 1.6; resize: vertical;
+}
+.paste-box textarea:focus { outline: 2px solid var(--focus); outline-offset: 0; border-color: transparent; }
 .saved { margin-top: 48px; }
 .saved-list { list-style: none; margin: 0; padding: 0; }
 .saved-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--rule); }

@@ -31,8 +31,9 @@
     expanded: new Set(),
     focus: 'all',
     recs: [],
-    recsLoading: false,
     recsError: '',
+    pasteText: '',
+    promptFallback: '',
     saved: null,
     editing: null,
     editingFile: null,
@@ -428,14 +429,25 @@
       const focusChips = Object.entries({ all: '골고루', ...REC_CATS })
         .map(([k, l]) => `<button class="chip" data-action="focus" data-focus="${k}" aria-pressed="${state.focus === k}"${k !== 'all' ? ` style="--c:var(--c-${k})"` : ''}>${k !== 'all' ? '<i></i>' : ''}${l}</button>`).join('');
       let results = '';
-      if (state.recsLoading) results = `<p class="loading">기록을 읽고 고르는 중이에요…</p>`;
-      else if (state.recsError) results = `<p class="error-text">${esc(state.recsError)}</p>`;
+      if (state.recsError) results = `<p class="error-text">${esc(state.recsError)}</p>`;
       else if (state.recs.length) results = `<ul class="recs">${state.recs.map((r, i) => recHTML(r, i)).join('')}</ul>`;
+      const fallback = state.promptFallback
+        ? `<label class="paste-box"><span>복사가 막혀 있어요. 아래 내용을 전부 선택해서(Ctrl+A) 복사해 주세요.</span><textarea id="prompt-fallback" rows="6" readonly>${esc(state.promptFallback)}</textarea></label>`
+        : '';
       recPart = `
         <div class="rec-controls">
           <div class="chips" role="group" aria-label="무엇을 추천받을까요">${focusChips}</div>
-          <button class="btn primary" data-action="get-recs"${state.recsLoading ? ' disabled' : ''}>추천 받기</button>
         </div>
+        <ol class="rec-steps">
+          <li><button class="btn primary" data-action="copy-prompt">추천 요청 복사하기</button> 내 기록과 취향이 담긴 요청문이 복사돼요.</li>
+          <li><a class="btn" href="https://claude.ai/new" target="_blank" rel="noopener">claude.ai 열기</a> 새 채팅에 붙여 넣고(Ctrl+V) 보내요.</li>
+          <li>Claude의 답변을 통째로 복사해서 아래 칸에 붙여 넣어요. 추천이 카드로 정리돼요.</li>
+        </ol>
+        ${fallback}
+        <label class="paste-box"><span class="sr">Claude 답변 붙여넣기</span>
+          <textarea id="paste-recs" rows="5" placeholder="Claude의 답변을 여기에 붙여 넣으세요">${esc(state.pasteText)}</textarea>
+        </label>
+        <p><button class="btn" data-action="parse-recs">추천 카드로 정리하기</button></p>
         ${results}
         <section class="saved">
           <h2>담아둔 것</h2>
@@ -446,7 +458,7 @@
     view.innerHTML = `
       <div class="page">
         <header class="page-head"><h1>새로운 것 추천받기</h1></header>
-        <p class="lede">아래 취향은 지금까지 남긴 기록의 태그와 별점으로 계산했어요. 추천은 이 기록들을 바탕으로, 아직 경험하지 않은 것 중에서 골라요.</p>
+        <p class="lede">아래 취향은 지금까지 남긴 기록의 태그와 별점으로 계산했어요. 추천은 이 기록을 claude.ai 채팅에 보내서 받아요. 별도 요금 없이 쓰고 있는 Claude 계정으로 동작해요.</p>
         <div class="two taste">
           <section class="panel"><h2>자주 쓴 태그</h2><ul class="cloud">${tagCloud}</ul></section>
           <section class="panel"><h2>별점 4점 이상</h2><ul class="loved">${loved || '<li class="muted">별점을 매긴 책, 영화, 음악이 아직 없어요.</li>'}</ul></section>
@@ -460,6 +472,53 @@
       const box = $('#saved-list');
       if (box) box.innerHTML = savedHTML();
     }
+  }
+
+  function buildPrompt(focus) {
+    const records = state.entries.slice(0, 120).map((e) => ({
+      종류: (CATS[e.category] && CATS[e.category].label) || e.category,
+      제목: e.title,
+      날짜: e.entry_date,
+      별점: e.rating,
+      태그: e.tags,
+      정보: e.meta,
+      느낀점: (e.content || '').slice(0, 220),
+    }));
+    const exclude = [...new Set([...state.entries.map((e) => e.title), ...(state.saved || []).map((r) => r.title)])];
+    const count = focus === 'all' ? '책, 영화, 음악, 취미를 각각 2개씩 모두 8개' : `${REC_CATS[focus]}만 5개`;
+    return [
+      '아래는 내가 개인 홈페이지에 남긴 기록이야 (책, 영화, 음악, 여행, 데이트, 운동).',
+      '',
+      JSON.stringify(records),
+      '',
+      `이 기록으로 내 취향을 파악해서, 아직 경험하지 않은 ${count}를 추천해 줘.`,
+      '',
+      '규칙:',
+      '- 실제로 존재하는 작품만 추천해. 확실하지 않으면 빼.',
+      `- 이미 경험한 것은 제외해: ${JSON.stringify(exclude)}`,
+      '- 별점이 높은 기록, 자주 쓴 태그, 느낀 점의 결을 근거로 골라.',
+      '- 익숙한 취향을 이어가는 것과 조금 새로운 방향으로 넓혀 주는 것을 섞어.',
+      '- 취미는 여행, 데이트, 운동 기록에서 보이는 생활 패턴을 반영해서 현실적으로 시작할 수 있는 것으로.',
+      '- reason 은 내 기록 중 무엇과 어떻게 이어지는지 구체적으로, 한국어 2문장 이내.',
+      '',
+      '답변 형식: 먼저 추천을 읽기 편하게 짧게 소개해 주고, 맨 마지막에 아래 형식의 JSON 코드 블록을 꼭 붙여 줘. (내 홈페이지에 붙여 넣을 거야)',
+      '{"items":[{"category":"book|movie|music|hobby","title":"제목","creator":"저자/감독/아티스트 (취미는 빈 문자열)","reason":"추천 이유","first_step":"취미일 때 시작하는 방법 한 줄, 아니면 빈 문자열"}]}',
+    ].join('\n');
+  }
+
+  function parseRecs(text) {
+    const clean = String(text || '').replace(/```(?:json)?/g, '');
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start < 0 || end < start) throw new Error('답변에서 추천 목록(JSON)을 찾지 못했어요. 답변 맨 끝의 코드 블록까지 함께 붙여 넣어 주세요.');
+    let data;
+    try { data = JSON.parse(clean.slice(clean.indexOf('{"items"') >= 0 ? clean.indexOf('{"items"') : start, end + 1)); }
+    catch (_) { throw new Error('추천 목록(JSON)을 읽지 못했어요. Claude에게 "JSON 코드 블록만 다시 보여 줘"라고 한 뒤 그 부분을 붙여 넣어 보세요.'); }
+    const items = ((data && data.items) || [])
+      .filter((i) => i && i.title && REC_CATS[i.category])
+      .map((i) => ({ category: i.category, title: String(i.title), creator: String(i.creator || ''), reason: String(i.reason || ''), first_step: String(i.first_step || '') }));
+    if (!items.length) throw new Error('읽을 수 있는 추천이 없었어요. category 는 book, movie, music, hobby 중 하나여야 해요.');
+    return items;
   }
 
   function recHTML(r, i) {
@@ -678,12 +737,34 @@
       case 'logout': await S.signOut(); toast('로그아웃했어요'); break;
 
       case 'focus': state.focus = t.dataset.focus; renderPicks(); break;
-      case 'get-recs':
-        state.recsLoading = true; state.recsError = ''; renderPicks();
-        try { state.recs = await S.recommend(state.focus); if (!state.recs.length) state.recsError = '추천을 고르지 못했어요. 기록을 조금 더 쌓고 다시 시도해 보세요.'; }
-        catch (ex) { state.recsError = ex.message; }
-        state.recsLoading = false; renderPicks();
+      case 'copy-prompt': {
+        const text = buildPrompt(state.focus);
+        state.promptFallback = '';
+        try {
+          await navigator.clipboard.writeText(text);
+          toast('복사했어요. claude.ai 새 채팅에 붙여 넣으세요');
+        } catch (_) {
+          state.promptFallback = text;
+          renderPicks();
+          const ta = $('#prompt-fallback');
+          if (ta) { ta.focus(); ta.select(); }
+        }
         break;
+      }
+      case 'parse-recs': {
+        const box = $('#paste-recs');
+        state.pasteText = box ? box.value : state.pasteText;
+        try {
+          state.recs = parseRecs(state.pasteText);
+          state.recsError = '';
+          state.pasteText = '';
+          toast(`추천 ${state.recs.length}개를 정리했어요`);
+        } catch (ex) {
+          state.recsError = ex.message;
+        }
+        renderPicks();
+        break;
+      }
       case 'save-rec': {
         const i = Number(t.dataset.i);
         try {
@@ -722,6 +803,7 @@
 
   document.addEventListener('input', (ev) => {
     if (ev.target.id === 'q') { state.filter.q = ev.target.value; renderFeedList(); }
+    if (ev.target.id === 'paste-recs') state.pasteText = ev.target.value;
   });
 
   $('#editor').addEventListener('change', (ev) => {
